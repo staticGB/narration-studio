@@ -110,7 +110,12 @@
       <div class="actions">
         <select class="lang-nav" id="lang-nav" aria-label="Language"><option value="./">English</option><option value="es.html">Español</option><option value="fr.html">Français</option><option value="it.html">Italiano</option><option value="pt.html">Português (Brasil)</option><option value="hi.html">हिन्दी</option><option value="ja.html">日本語</option><option value="zh.html">中文</option><option value="languages.html" selected>Tagalog / Hiligaynon (experimental)</option></select>
         <button id="btn-models" class="secondary small" type="button">Manage models</button>
-        <button id="btn-sample" class="secondary small" type="button">Insert Spanish sample</button>
+        <select class="lang-nav" id="sample-pick" aria-label="Insert a sample script">
+          <option value="" selected disabled>Insert sample...</option>
+          <option value="spa">Spanish sample</option>
+          <option value="tgl">Tagalog sample</option>
+          <option value="hil">Hiligaynon sample</option>
+        </select>
       </div>
     </header>
 
@@ -211,7 +216,16 @@ const SYS_SAMPLES = {
   es: "Hola, así es como sueno.", zh: "你好，这是我的声音。", ar: "مرحبًا، هذا هو صوتي.",
   fil: "Kumusta, ito ang tunog ko.", tl: "Kumusta, ito ang tunog ko.", en: "Hi, this is how I sound."
 };
-const SAMPLE_TEXT = "Narrator: La puerta se abrió despacio y la lámpara tembló.\n\nLucía: ¿Lo oyes?\nMateo: Sí... y no me gusta nada.\n[overlap] Lucía: ¡Corre!\n[pause 1]\nNarrator: Y la noche se quedó en silencio.";
+// ===== SAMPLE SCRIPTS =====
+// To change a sample, edit the text below. The key (spa, tgl, hil) must match the model's key.
+// "cast" lists the characters that get created, and every line is read by that language's voice.
+// Tagalog and Hiligaynon: these are my own attempts, so have a native speaker check them.
+const SAMPLES = {
+  spa: { cast: ["Lucía", "Mateo"], text: "Narrator: La puerta se abrió despacio y la lámpara tembló.\n\nLucía: ¿Lo oyes?\nMateo: Sí... y no me gusta nada.\n[overlap] Lucía: ¡Corre!\n[pause 1]\nNarrator: Y la noche se quedó en silencio." },
+  tgl: { cast: ["Maria", "Jose"], text: "Narrator: Dahan-dahang bumukas ang pinto at nanginig ang ilawan.\n\nMaria: Naririnig mo ba iyon?\nJose: Oo... at hindi ko ito gusto.\n[overlap] Maria: Tumakbo ka!\n[pause 1]\nNarrator: At muling natahimik ang gabi." },
+  hil: { cast: ["Maria", "Jose"], text: "Narrator: Hinay-hinay nga nag-abri ang pwertahan, kag nag-uyog ang suga.\n\nMaria: Nabatian mo bala ina?\nJose: Huo... kag indi ko ina gusto.\n[overlap] Maria: Dalagan!\n[pause 1]\nNarrator: Kag natawhay liwat ang gab-i." }
+};
+// ===== END SAMPLE SCRIPTS =====
 
 /* PURE:START (no page access below this line until PURE:END) */
 function splitText(text, maxLen = 280) {
@@ -417,7 +431,7 @@ function setProgress(p) {
 function syncControls() {
   playBtn.disabled = busy || !textEl.value.trim();
   document.querySelectorAll(".btn-preview").forEach(b => b.disabled = busy);
-  $("btn-sample").disabled = busy;
+  $("sample-pick").disabled = busy;
 }
 function showIdle() { playBtn.hidden = false; stopBtn.hidden = true; }
 function invalidateAudio() {
@@ -855,11 +869,18 @@ speedEl.addEventListener("input", () => { $("speed-val").textContent = String(pa
 playBtn.addEventListener("click", generateAndPlay);
 stopBtn.addEventListener("click", stopAll);
 saveBtn.addEventListener("click", saveWav);
-$("btn-sample").addEventListener("click", () => {
-  ["Lucía", "Mateo"].forEach(name => { if (!cast.some(c => c.name.trim().toLowerCase() === name.toLowerCase())) addCharacter(name); });
-  cast[0].voice = "m:spa";
+$("sample-pick").addEventListener("change", e => {
+  const key = e.target.value;
+  e.target.value = "";
+  const sample = SAMPLES[key];
+  if (!sample) return;
+  if (!models.some(m => m.key === key)) { toast(`The ${key} model isn't in your model list. Use Manage models > Reset to defaults.`, "error"); return; }
+  const voice = "m:" + key;
+  sample.cast.forEach(name => { if (!cast.some(c => c.name.trim().toLowerCase() === name.toLowerCase())) addCharacter(name); });
+  cast[0].voice = voice;
+  cast.forEach(c => { if (sample.cast.some(n => n.toLowerCase() === c.name.trim().toLowerCase())) c.voice = voice; });
   renderCast(); renderToolbar();
-  textEl.value = SAMPLE_TEXT; invalidateAudio(); syncControls(); schedulePreview(); persist();
+  textEl.value = sample.text; invalidateAudio(); syncControls(); schedulePreview(); persist();
 });
 
 restore();
@@ -867,6 +888,7 @@ $("speed-val").textContent = String(parseFloat(speedEl.value));
 if ("speechSynthesis" in window) { speechSynthesis.onvoiceschanged = loadSystemVoices; systemVoices = speechSynthesis.getVoices(); }
 renderCast(); renderToolbar(); renderScriptPreview(); syncControls();
 
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch {}
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
   navigator.serviceWorker.register("./sw.js").catch(e => console.warn("Offline cache unavailable:", e));
 }

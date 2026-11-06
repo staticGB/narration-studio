@@ -46,6 +46,12 @@ async function customTokenizer(id) {
 async function loadModel(id) {
   if (loaded.has(id)) return loaded.get(id);
   const { AutoTokenizer, VitsModel } = await getLib();
+  const modelUrl = id.includes("/")
+    ? `https://huggingface.co/${id}/resolve/main/onnx/model_quantized.onnx`
+    : new URL(`./models/${id}/onnx/model_quantized.onnx`, self.location.href).href;
+  let cached = false;
+  try { cached = !!(await caches.match(modelUrl)); } catch {}
+  console.log("[voice model]", id, cached ? "found a saved copy on this device" : "not saved yet");
   const files = {};
   const progress_callback = p => {
     if (p.status === "progress" && p.file) {
@@ -53,10 +59,11 @@ async function loadModel(id) {
       let L = 0, T = 0;
       for (const f of Object.values(files)) { L += f.loaded; T += f.total; }
       if (T) self.postMessage({ type: "progress", percent: (L / T) * 100,
-        text: `Downloading voice model: ${(L / 1e6).toFixed(0)} of ${(T / 1e6).toFixed(0)} MB (first time only)` });
+        text: cached ? `Loading the saved voice model from this device... ${Math.round((L / T) * 100)}%`
+          : `Downloading voice model: ${(L / 1e6).toFixed(0)} of ${(T / 1e6).toFixed(0)} MB (first time only)` });
     }
   };
-  self.postMessage({ type: "progress", percent: 0, text: "Loading voice model..." });
+  self.postMessage({ type: "progress", percent: 0, text: cached ? "Loading the saved voice model from this device..." : "Loading voice model..." });
 
   let tokenize;
   if (id.includes("/")) {

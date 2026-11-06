@@ -458,6 +458,7 @@ export function start(config) {
   $("speed-val").textContent = String(parseFloat(speedEl.value));
   renderCast(); renderToolbar(); renderScriptPreview(); syncControls();
 
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch {}
   if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
     navigator.serviceWorker.register("./sw.js").catch(e => console.warn("Offline cache unavailable:", e));
   }

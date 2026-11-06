@@ -17,6 +17,11 @@ const tick = () => new Promise(r => setTimeout(r));
 async function loadKokoro() {
   if (tts) return tts;
   const { KokoroTTS } = await import(KOKORO_URL);
+  // Is the model already saved on this device? (Decides what the progress text says.)
+  let cached = false;
+  try { cached = !!(await caches.match(`https://huggingface.co/${KOKORO_MODEL}/resolve/main/onnx/model_quantized.onnx`)); } catch {}
+  console.log("[voice model]", cached ? "found a saved copy on this device" : "not saved yet, downloading");
+  if (cached) self.postMessage({ type: "progress", percent: 0, text: "Loading the saved voice model from this device..." });
   const files = {};
   tts = await KokoroTTS.from_pretrained(KOKORO_MODEL, {
     dtype: "q8",
@@ -27,7 +32,8 @@ async function loadKokoro() {
         let L = 0, T = 0;
         for (const f of Object.values(files)) { L += f.loaded; T += f.total; }
         if (T) self.postMessage({ type: "progress", percent: (L / T) * 100,
-          text: `Downloading voice model: ${(L / 1e6).toFixed(0)} of ${(T / 1e6).toFixed(0)} MB (first time only)` });
+          text: cached ? `Loading the saved voice model from this device... ${Math.round((L / T) * 100)}%`
+          : `Downloading voice model: ${(L / 1e6).toFixed(0)} of ${(T / 1e6).toFixed(0)} MB (first time only)` });
       }
     }
   });
