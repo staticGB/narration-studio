@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Narration Studio: Português do Brasil (Portuguese)</title>
+<style>
+  :root {
+    --bg: #14171c; --panel: #1c2027; --field: #101318; --line: #2d333d;
+    --text: #e6e9ee; --muted: #8e97a5; --accent: #5aa9ff; --accent-strong: #3b8cf0;
+    --warn: #e0b050; --bad: #e5666d;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh; display: flex; justify-content: center; padding: 24px 16px;
+  }
+  main { width: 100%; max-width: 760px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px; display: grid; gap: 18px; }
+  header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 1.25rem; margin: 0; font-weight: 650; }
+  h2 { font-size: 1rem; margin: 0; font-weight: 650; }
+  label, .label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 6px; }
+  textarea, select, input[type=text] {
+    width: 100%; background: var(--field); color: var(--text); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px 12px; font: inherit;
+  }
+  textarea { min-height: 260px; resize: vertical; font-size: 1.05rem; line-height: 1.6; }
+  input[readonly] { color: var(--muted); }
+  textarea:focus, select:focus, input:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  button {
+    font: inherit; font-weight: 600; border: 0; border-radius: 10px; padding: 12px 18px;
+    color: #fff; background: var(--accent-strong); cursor: pointer;
+  }
+  button:hover:not(:disabled) { background: var(--accent); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button.secondary { background: #2c333f; }
+  button.secondary:hover:not(:disabled) { background: #384150; }
+  button.stop { background: #b9444b; }
+  button.small { padding: 8px 12px; font-size: .85rem; }
+  button.grow { flex: 1; min-width: 180px; }
+  [hidden] { display: none !important; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .range-line { display: flex; align-items: center; gap: 12px; }
+  input[type=range] { flex: 1; accent-color: var(--accent); }
+  .status { font-size: .9rem; color: var(--muted); min-height: 1.3em; }
+  .bar { height: 8px; background: var(--field); border-radius: 99px; overflow: hidden; border: 1px solid var(--line); }
+  .bar > div { height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+  .hint { font-size: .82rem; color: var(--muted); line-height: 1.5; margin: 0; }
+  a { color: var(--accent); }
+  a.btn-link { display: inline-block; font-weight: 600; font-size: .85rem; padding: 8px 12px; border-radius: 10px;
+    color: #fff; background: #2c333f; text-decoration: none; }
+  a.btn-link:hover { background: #384150; }
+  a.btn-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  select.lang-nav { width: auto; background: #2c333f; color: #fff; border: 0; border-radius: 10px; padding: 8px 12px; font-weight: 600; font-size: .85rem; cursor: pointer; }
+  select.lang-nav:hover { background: #384150; }
+  code { background: #0c0f13; padding: 1px 6px; border-radius: 5px; font-size: .9em; }
+
+  .cast { display: grid; gap: 8px; }
+  .cast-row { display: grid; grid-template-columns: minmax(100px, 1fr) 1.7fr auto auto; gap: 8px; align-items: center; }
+  .cast-row .spacer { width: 40px; }
+  @media (max-width: 600px) {
+    .cast-row { grid-template-columns: 1fr auto auto; }
+    .cast-row input[type=text] { grid-column: 1 / -1; }
+  }
+  .section-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; }
+  .chips .label { margin: 0 4px 0 0; }
+  .divider { width: 1px; height: 22px; background: var(--line); margin: 0 4px; }
+
+  details { background: var(--field); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; }
+  summary { cursor: pointer; font-weight: 600; }
+  summary.warn { color: var(--warn); }
+  details[open] > summary { margin-bottom: 10px; }
+  .dir-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
+  .dir-row p { margin: 4px 0 0; font-size: .85rem; color: var(--muted); line-height: 1.45; }
+  .pv-row { display: grid; grid-template-columns: 130px 1fr; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line); font-size: .92rem; }
+  .pv-who { font-weight: 600; }
+  .pv-voice { color: var(--muted); font-size: .78rem; font-weight: 400; }
+  .pv-tag { color: var(--accent); font-size: .78rem; margin-right: 6px; }
+  .pv-pause { color: var(--muted); font-style: italic; }
+  .pv-warn { color: var(--warn); font-size: .88rem; padding: 4px 0; }
+  @media (max-width: 520px) { .pv-row { grid-template-columns: 1fr; gap: 2px; } }
+
+  dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 14px; padding: 0; width: min(560px, 94vw); max-height: 86vh; }
+  dialog::backdrop { background: rgba(0,0,0,.6); }
+  .dlg { padding: 20px; display: grid; gap: 14px; }
+  .dlg-list { overflow: auto; max-height: 48vh; display: grid; gap: 4px; padding-right: 4px; }
+  .dlg-group { font-size: .8rem; color: var(--muted); margin: 10px 0 2px; }
+  .voice-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 4px 0; }
+
+  #toast { position: fixed; top: 16px; right: 16px; background: #243040; border: 1px solid var(--line);
+    padding: 10px 14px; border-radius: 10px; font-size: .9rem; max-width: 340px; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 10; }
+  #toast.show { opacity: 1; }
+  #toast.error { background: #3a2226; border-color: #6b2f36; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<main>
+  <div class="panel">
+    <header>
+      <h1>Narration Studio: Português do Brasil (Portuguese)</h1>
+      <div class="actions">
+        <select class="lang-nav" id="lang-nav" aria-label="Language"><option value="./">English</option><option value="es.html">Español</option><option value="fr.html">Français</option><option value="it.html">Italiano</option><option value="pt.html" selected>Português (Brasil)</option><option value="hi.html">हिन्दी</option><option value="ja.html">日本語</option><option value="zh.html">中文</option><option value="languages.html">Tagalog / Hiligaynon (experimental)</option></select>
+        <button id="btn-sample" class="secondary small" type="button">Insert sample</button>
+      </div>
+    </header>
+
+    <div>
+      <div id="progress-wrap" class="bar" hidden><div id="progress"></div></div>
+      <div class="status" id="status" aria-live="polite"></div>
+    </div>
+
+    <section>
+      <div class="section-head">
+        <h2>Cast</h2>
+        <button id="btn-add-char" class="secondary small" type="button">Add character</button>
+      </div>
+      <div id="cast" class="cast"></div>
+      <p class="hint" style="margin-top:8px">Press Preview on any row to hear that voice. Lines without a character name are read by the Narrator.</p>
+    </section>
+
+    <section>
+      <div class="section-head"><h2>Script</h2></div>
+      <div class="chips" id="toolbar"></div>
+      <textarea id="text" dir="auto" placeholder="Escreva seu texto ou roteiro:&#10;&#10;Lúcia: Você está ouvindo isso?&#10;Mateus: Estou... e não gosto disso."></textarea>
+    </section>
+
+    <details id="directions">
+      <summary>Directions: what you can write in the script</summary>
+      <div class="dir-row">
+        <div><code>Name: line</code><p>Character speaks the line. Lines without a name use the Narrator. Use the buttons above the text box to add one.</p></div>
+        <span></span>
+      </div>
+      <div class="dir-row">
+        <div><code>[pause 1.5]</code><p>Silence for that many seconds, on its own line.</p></div>
+        <button class="secondary small" type="button" data-insert="pause">Insert</button>
+      </div>
+      <div class="dir-row">
+        <div><code>[overlap] Name: line</code><p>The line starts before the previous one ends. <code>[overlap 1]</code> starts it 1 second early (default 0.6).</p></div>
+        <button class="secondary small" type="button" data-insert="overlap">Insert</button>
+      </div>
+      <div class="dir-row">
+        <div><code>blank line</code><p>A short pause between paragraphs.</p></div>
+        <span></span>
+      </div>
+      <div class="dir-row">
+        <div><code>[anything else]</code><p>Other bracketed text is skipped, not read aloud.</p></div>
+        <span></span>
+      </div>
+    </details>
+
+    <details id="preview">
+      <summary id="pv-summary">Script preview</summary>
+      <div id="pv-body"></div>
+    </details>
+
+    <div>
+      <label for="speed">Speed: <span id="speed-val">1</span>x</label>
+      <div class="range-line"><input id="speed" type="range" min="0.6" max="1.5" step="0.05" value="1"></div>
+    </div>
+
+    <div class="actions">
+      <button id="btn-play" class="grow" type="button" disabled>Generate and play</button>
+      <button id="btn-stop" class="grow stop" type="button" hidden>Stop</button>
+      <button id="btn-save" class="secondary" type="button" hidden>Save .wav</button>
+    </div>
+
+    <p class="hint">Voices run on your device with Kokoro. No account or API key. The first use downloads the voice model (about 90 MB) and a small file for each voice you use. Pronunciation for this page is generated in your browser too.</p>
+  </div>
+</main>
+
+<script type="module">
+import { start } from "./lang-page.js";
+start({"lang": "pt", "title": "Português do Brasil (Portuguese)", "voices": [["pf_dora", "Dora", "woman"], ["pm_alex", "Alex", "man"], ["pm_santa", "Santa", "man"]], "preview": "Olá, esta é a minha voz.", "sample": {"cast": ["Lúcia", "Mateus"], "text": "Narrator: A porta se abriu devagar e a lâmpada tremeu.\n\nLúcia: Você está ouvindo isso?\nMateus: Estou... e não gosto nada disso.\n[overlap] Lúcia: Corra!\n[pause 1]\nNarrator: E a noite voltou ao silêncio."}, "maxChars": 280});
+</script>
+<script>document.getElementById("lang-nav").addEventListener("change", function (e) { location.href = e.target.value; });</script>
+</body>
+</html>
