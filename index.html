@@ -186,6 +186,7 @@
     <div id="voice-list" class="dlg-list"></div>
     <div class="bar"><div id="dl-progress"></div></div>
     <div class="status" id="dl-status"></div>
+    <div class="status" id="dl-msg" style="color:var(--text)" aria-live="polite"></div>
     <button id="btn-dl-all" type="button">Download all voices for offline use</button>
   </div>
 </dialog>
@@ -379,6 +380,8 @@ function toast(msg, type = "info") {
   const t = $("toast");
   t.textContent = msg; t.className = "show " + (type === "error" ? "error" : "");
   clearTimeout(toast._t); toast._t = setTimeout(() => t.className = "", 4500);
+  // The page's toast is hidden behind the open voice window, so repeat the message inside it.
+  const dm = $("dl-msg"); dm.textContent = msg; dm.style.color = type === "error" ? "var(--bad)" : "var(--text)";
 }
 function setStatus(s) { statusEl.textContent = s; dlStatus.textContent = s; }
 function setProgress(p) {
@@ -599,6 +602,7 @@ async function runJob(jobs, onChunk) {
 /* ---------- Voice previews ---------- */
 async function previewVoice(voiceId, btn) {
   if (busy) return;
+  $("dl-msg").textContent = "";
   stopAudios();
   const label = btn.textContent;
   let url = previewCache.get(voiceId);

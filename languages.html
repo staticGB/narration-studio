@@ -187,9 +187,15 @@
       <h2>On-device models</h2>
       <button id="btn-close-models" class="secondary small" type="button">Close</button>
     </div>
-    <p class="hint">A model id with a slash, like <code>Xenova/mms-tts-spa</code>, downloads from Hugging Face the first time (about 38 MB) and is then cached. An id without a slash, like <code>mms-tts-hil</code>, loads from a <code>models</code> folder in your own GitHub repo. Tagalog and Hiligaynon need that: they have to be converted first with the <code>convert_mms.py</code> script. The sample text is what Preview speaks, so edit it if my wording is off.</p>
+    <p class="hint">A model id with a slash, like <code>Xenova/mms-tts-spa</code>, downloads from Hugging Face the first time (about 38 MB) and is then cached. An id without a slash, like <code>mms-tts-hil</code>, loads from a <code>models</code> folder in your own GitHub repo. Tagalog and Hiligaynon need that: they have to be converted first with the <code>convert_mms.py</code> script (run it once for each language). Press Test on a row to hear a model and find out exactly what's missing if it fails. The sample text is what Test and Preview speak, so edit it if my wording is off.</p>
     <div id="model-list" class="dlg-list"></div>
-    <button id="btn-add-model" class="secondary" type="button">Add a model</button>
+    <div class="bar"><div id="dlg-progress"></div></div>
+    <div class="status" id="dlg-status" aria-live="polite"></div>
+    <div class="status" id="dlg-msg" style="color:var(--text)" aria-live="polite"></div>
+    <div class="actions">
+      <button id="btn-add-model" class="secondary" type="button">Add a model</button>
+      <button id="btn-reset-models" class="secondary" type="button">Reset to defaults</button>
+    </div>
   </div>
 </dialog>
 
@@ -197,7 +203,7 @@
 /* ============ Defaults ============ */
 const DEFAULT_MODELS = [
   { key: "spa", label: "Spanish (MMS)", id: "Xenova/mms-tts-spa", sample: "Hola, así es como sueno." },
-  { key: "tgl", label: "Tagalog (MMS, your model)", id: "mms-tts-tgl", sample: "Kumusta, ito ang tunog ko." },
+  { key: "tgl", label: "Tagalog (MMS, your model)", id: "mms-tts-tgl", sample: "Kumusta, ito ang aking boses." },
   { key: "hil", label: "Hiligaynon (MMS, your model)", id: "mms-tts-hil", sample: "Kamusta, amo ini ang akon tingog." }
 ];
 const PREFERRED_LANGS = ["es", "zh", "ar", "fil", "tl"];
@@ -364,6 +370,7 @@ const playBtn = $("btn-play"), stopBtn = $("btn-stop"), saveBtn = $("btn-save");
 const statusEl = $("status"), progWrap = $("progress-wrap"), progEl = $("progress");
 const pvSummary = $("pv-summary"), pvBody = $("pv-body");
 const modelsDialog = $("models-dialog"), allLangsEl = $("all-langs");
+const dlgStatus = $("dlg-status"), dlgMsg = $("dlg-msg"), dlgProgress = $("dlg-progress");
 
 function el(tag, cls, text) {
   const e = document.createElement(tag);
@@ -397,11 +404,15 @@ function toast(msg, type = "info") {
   const t = $("toast");
   t.textContent = msg; t.className = "show " + (type === "error" ? "error" : "");
   clearTimeout(toast._t); toast._t = setTimeout(() => t.className = "", 6000);
+  // The page's toast is hidden behind the open Manage models window, so repeat the message inside it.
+  dlgMsg.textContent = msg; dlgMsg.style.color = type === "error" ? "var(--bad)" : "var(--text)";
 }
-function setStatus(s) { statusEl.textContent = s; }
+function setStatus(s) { statusEl.textContent = s; dlgStatus.textContent = s; }
 function setProgress(p) {
   progWrap.hidden = p == null;
-  if (p != null) progEl.style.width = clamp(p, 0, 100) + "%";
+  const w = p == null ? "0" : clamp(p, 0, 100) + "%";
+  if (p != null) progEl.style.width = w;
+  dlgProgress.style.width = w;
 }
 function syncControls() {
   playBtn.disabled = busy || !textEl.value.trim();
@@ -637,13 +648,26 @@ function startWorker() {
   worker.onerror = e => handlers.error?.({ message: e.message || "The voice worker failed to start." });
   return worker;
 }
-function friendlyModelError(m) {
+// For a model stored in this site's models folder, check which files are really there.
+async function diagnoseLocal(id) {
+  const exists = async f => { try { return (await fetch(`./models/${id}/${f}`, { method: "HEAD", cache: "no-store" })).ok; } catch { return false; } };
+  const missing = [];
+  for (const f of ["config.json", "vocab.json", "tokenizer_config.json"]) if (!(await exists(f))) missing.push(f);
+  const q = await exists("onnx/model_quantized.onnx"), full = await exists("onnx/model.onnx");
+  if (!q && !full) missing.push("onnx/model_quantized.onnx");
+  return missing;
+}
+async function friendlyModelError(m) {
   const id = m.model || "";
-  if (m.stage === "load" && id && !id.includes("/"))
-    return `Couldn't find the model files in models/${id}/ on this site. Convert the model and upload that folder to your repo (see the conversion steps), then try again.`;
+  const detail = String(m.message || "").slice(0, 200);
+  if (m.stage === "load" && id && !id.includes("/")) {
+    const missing = await diagnoseLocal(id);
+    if (missing.length) return `Missing from models/${id}/ on this site: ${missing.join(", ")}. Run convert_mms.py for this language, upload the whole models folder to the root of your repo, and wait for the site to rebuild.`;
+    return `The files for "${id}" are on the site, but the model wouldn't load. Details: ${detail}`;
+  }
   if (m.stage === "load")
-    return `Couldn't load the model "${id}". The first use needs internet, and the id must be an ONNX model that works with Transformers.js. Details are in the console.`;
-  return "The voice model failed while generating. Details are in the console.";
+    return `Couldn't load the model "${id}". The first use needs internet, and the id must be an ONNX model that works with Transformers.js. Details: ${detail}`;
+  return `The voice model failed while generating. Details: ${detail}`;
 }
 // jobs: [{ text, model }] -> [{ audio, rate }] (null if cancelled)
 function runJob(jobs, onChunk) {
@@ -654,7 +678,7 @@ function runJob(jobs, onChunk) {
     handlers.chunk = m => { results[m.index] = { audio: m.audio, rate: m.rate }; onChunk?.(m.index + 1, m.total); };
     handlers.done = () => resolve(results);
     handlers.cancelled = () => resolve(null);
-    handlers.error = m => { console.error(m); reject(new Error(friendlyModelError(m))); };
+    handlers.error = async m => { console.error(m); reject(new Error(await friendlyModelError(m))); };
     w.postMessage({ type: "generate", jobs });
   });
 }
@@ -676,6 +700,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 /* ---------- Voice previews ---------- */
 async function previewVoice(voiceId, btn) {
   if (busy) return;
+  dlgMsg.textContent = "";
   stopAudios();
   const label = btn.textContent;
   try {
@@ -802,15 +827,23 @@ function renderModels() {
       i.addEventListener("input", () => { m[key] = i.value; previewCache.clear(); persist(); });
       return i;
     };
-    const rm = el("button", "secondary small wide", "Remove this model"); rm.type = "button";
+    const test = el("button", "secondary small btn-preview", "Test"); test.type = "button";
+    test.addEventListener("click", () => previewVoice("m:" + m.key, test));
+    const rm = el("button", "secondary small", "Remove this model"); rm.type = "button";
     rm.addEventListener("click", () => { models = models.filter(x => x !== m); renderModels(); persist(); });
-    row.append(mk("Name shown in menus", "label"), mk("Model id or folder name", "id"), mk("Sample sentence for Preview", "sample", "wide"), rm);
+    const acts = el("div", "wide actions"); acts.append(test, rm);
+    row.append(mk("Name shown in menus", "label"), mk("Model id or folder name", "id"), mk("Sample sentence for Test and Preview", "sample", "wide"), acts);
     list.append(row);
   });
 }
 $("btn-models").addEventListener("click", () => { renderModels(); modelsDialog.showModal(); });
 $("btn-close-models").addEventListener("click", () => { modelsDialog.close(); renderCast(); renderToolbar(); schedulePreview(); });
 modelsDialog.addEventListener("close", () => { renderCast(); schedulePreview(); });
+$("btn-reset-models").addEventListener("click", () => {
+  if (!confirm("Reset the model list to the defaults? Models you added will disappear from this list. Your files on the site are not touched.")) return;
+  models = DEFAULT_MODELS.map(m => ({ ...m })); nextModel = 1; previewCache.clear();
+  renderModels(); persist(); toast("Model list reset to the defaults.");
+});
 $("btn-add-model").addEventListener("click", () => {
   models.push({ key: "c" + nextModel++, label: "New model", id: "", sample: "Hello, this is a test." });
   renderModels(); persist();
